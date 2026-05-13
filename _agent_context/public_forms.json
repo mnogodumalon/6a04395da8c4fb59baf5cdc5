@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "forms": [
+    {
+      "entity": "abteilungen",
+      "app_id": "6a04393196b6d0e1fe432568",
+      "path": "/rest/apps/6a04393196b6d0e1fe432568/records",
+      "allowed_fields": [
+        "abteilung_name",
+        "abteilung_kuerzel",
+        "abteilung_beschreibung",
+        "abteilung_leiter_vorname",
+        "abteilung_leiter_nachname",
+        "abteilung_standort",
+        "abteilung_telefon"
+      ],
+      "pow": true,
+      "pow_difficulty": 50000,
+      "title": "Abteilungen — Formular"
+    },
+    {
+      "entity": "stellen",
+      "app_id": "6a04393858a300b18cad58a9",
+      "path": "/rest/apps/6a04393858a300b18cad58a9/records",
+      "allowed_fields": [
+        "stelle_titel",
+        "stelle_beschreibung",
+        "stelle_beschaeftigungsart",
+        "stelle_gehalt_min",
+        "stelle_gehalt_max",
+        "stelle_anforderungen"
+      ],
+      "pow": true,
+      "pow_difficulty": 50000,
+      "title": "Stellen — Formular"
+    },
+    {
+      "entity": "mitarbeiter",
+      "app_id": "6a0439397a0c50347e1a18b3",
+      "path": "/rest/apps/6a0439397a0c50347e1a18b3/records",
+      "allowed_fields": [
+        "vorname",
+        "nachname",
+        "geburtsdatum",
+        "geschlecht",
+        "email",
+        "telefon",
+        "strasse",
+        "hausnummer",
+        "plz",
+        "ort",
+        "mitarbeiter_nr",
+        "eintrittsdatum",
+        "beschaeftigungsstatus",
+        "vertragsart",
+        "ma_notizen"
+      ],
+      "pow": true,
+      "pow_difficulty": 50000,
+      "title": "Mitarbeiter — Formular"
+    },
+    {
+      "entity": "abwesenheiten",
+      "app_id": "6a04393b87d551873784e867",
+      "path": "/rest/apps/6a04393b87d551873784e867/records",
+      "allowed_fields": [
+        "abw_art",
+        "abw_von",
+        "abw_bis",
+        "abw_grund",
+        "abw_status",
+        "abw_genehmigt_von_vorname",
+        "abw_genehmigt_von_nachname",
+        "abw_bemerkung"
+      ],
+      "pow": true,
+      "pow_difficulty": 50000,
+      "title": "Abwesenheiten — Formular"
+    },
+    {
+      "entity": "leistungsbeurteilungen",
+      "app_id": "6a04393ce2ed260f9576b292",
+      "path": "/rest/apps/6a04393ce2ed260f9576b292/records",
+      "allowed_fields": [
+        "lb_beurteilungszeitraum",
+        "lb_beurteiler_vorname",
+        "lb_beurteiler_nachname",
+        "lb_datum",
+        "lb_fachkompetenz",
+        "lb_teamarbeit",
+        "lb_kommunikation",
+        "lb_eigeninitiative",
+        "lb_gesamtbewertung",
+        "lb_staerken",
+        "lb_entwicklungsfelder",
+        "lb_ziele",
+        "lb_kommentar"
+      ],
+      "pow": true,
+      "pow_difficulty": 50000,
+      "title": "Leistungsbeurteilungen — Formular"
+    }
+  ]
+}

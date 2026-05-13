@@ -1,0 +1,10 @@
+- Abteilungen (abteilungen): abteilung_name[string/text], abteilung_kuerzel[string/text], abteilung_beschreibung[string/textarea], abteilung_leiter_vorname[string/text], abteilung_leiter_nachname[string/text], abteilung_standort[string/text], abteilung_telefon[string/tel]
+- Stellen (stellen): stelle_titel[string/text], stelle_abteilung[applookup/select], stelle_beschreibung[string/textarea], stelle_beschaeftigungsart[lookup/select], stelle_gehalt_min[number], stelle_gehalt_max[number], stelle_anforderungen[string/textarea]
+  → stelle_abteilung links to app_id 6a04393196b6d0e1fe432568
+- Mitarbeiter (mitarbeiter): vorname[string/text], nachname[string/text], geburtsdatum[date/date], geschlecht[lookup/radio], email[string/email], telefon[string/tel], strasse[string/text], hausnummer[string/text], plz[string/text], ort[string/text], mitarbeiter_nr[string/text], eintrittsdatum[date/date], beschaeftigungsstatus[lookup/select], vertragsart[lookup/select], ma_abteilung[applookup/select], ma_stelle[applookup/select], ma_foto[file], ma_notizen[string/textarea]
+  → ma_abteilung links to app_id 6a04393196b6d0e1fe432568
+  → ma_stelle links to app_id 6a04393858a300b18cad58a9
+- Abwesenheiten (abwesenheiten): abw_mitarbeiter[applookup/select], abw_art[lookup/select], abw_von[date/date], abw_bis[date/date], abw_grund[string/textarea], abw_status[lookup/radio], abw_genehmigt_von_vorname[string/text], abw_genehmigt_von_nachname[string/text], abw_bemerkung[string/textarea]
+  → abw_mitarbeiter links to app_id 6a0439397a0c50347e1a18b3
+- Leistungsbeurteilungen (leistungsbeurteilungen): lb_mitarbeiter[applookup/select], lb_beurteilungszeitraum[string/text], lb_beurteiler_vorname[string/text], lb_beurteiler_nachname[string/text], lb_datum[date/date], lb_fachkompetenz[lookup/radio], lb_teamarbeit[lookup/radio], lb_kommunikation[lookup/radio], lb_eigeninitiative[lookup/radio], lb_gesamtbewertung[lookup/select], lb_staerken[string/textarea], lb_entwicklungsfelder[string/textarea], lb_ziele[string/textarea], lb_kommentar[string/textarea]
+  → lb_mitarbeiter links to app_id 6a0439397a0c50347e1a18b3
