@@ -6,7 +6,6 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ErrorBusProvider } from '@/components/ErrorBus';
 import { Layout } from '@/components/Layout';
 import DashboardOverview from '@/pages/DashboardOverview';
-import { WorkflowPlaceholders } from '@/components/WorkflowPlaceholders';
 import AdminPage from '@/pages/AdminPage';
 import AbteilungenPage from '@/pages/AbteilungenPage';
 import StellenPage from '@/pages/StellenPage';
@@ -21,6 +20,8 @@ import PublicFormLeistungsbeurteilungen from '@/pages/public/PublicForm_Leistung
 // <public:imports>
 // </public:imports>
 // <custom:imports>
+const MitarbeiterOnboardingPage = lazy(() => import('@/pages/intents/MitarbeiterOnboardingPage'));
+const LeistungsbeurteilungPage = lazy(() => import('@/pages/intents/LeistungsbeurteilungPage'));
 // </custom:imports>
 
 export default function App() {
@@ -38,7 +39,7 @@ export default function App() {
               {/* <public:routes> */}
               {/* </public:routes> */}
               <Route element={<Layout />}>
-                <Route index element={<><div className="mb-8"><WorkflowPlaceholders /></div><DashboardOverview /></>} />
+                <Route index element={<DashboardOverview />} />
                 <Route path="abteilungen" element={<AbteilungenPage />} />
                 <Route path="stellen" element={<StellenPage />} />
                 <Route path="mitarbeiter" element={<MitarbeiterPage />} />
@@ -46,6 +47,8 @@ export default function App() {
                 <Route path="leistungsbeurteilungen" element={<LeistungsbeurteilungenPage />} />
                 <Route path="admin" element={<AdminPage />} />
                 {/* <custom:routes> */}
+                <Route path="intents/mitarbeiter-onboarding" element={<Suspense fallback={null}><MitarbeiterOnboardingPage /></Suspense>} />
+                <Route path="intents/leistungsbeurteilung" element={<Suspense fallback={null}><LeistungsbeurteilungPage /></Suspense>} />
                 {/* </custom:routes> */}
               </Route>
             </Routes>

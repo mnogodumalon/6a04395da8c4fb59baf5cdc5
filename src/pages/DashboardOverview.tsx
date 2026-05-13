@@ -6,7 +6,7 @@ import { LivingAppsService, createRecordUrl } from '@/services/livingAppsService
 import { formatDate } from '@/lib/formatters';
 import { useState, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { IconAlertCircle, IconTool, IconRefresh, IconCheck, IconPlus, IconPencil, IconTrash, IconUsers, IconBriefcase, IconBuilding, IconCalendarOff, IconStar, IconSearch, IconX, IconChevronRight } from '@tabler/icons-react';
+import { IconAlertCircle, IconTool, IconRefresh, IconCheck, IconPlus, IconPencil, IconTrash, IconUsers, IconBriefcase, IconBuilding, IconCalendarOff, IconStar, IconSearch, IconX, IconChevronRight, IconUserPlus, IconClipboardCheck } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -170,6 +170,30 @@ export default function DashboardOverview() {
 
   return (
     <div className="space-y-6">
+      {/* Intent Navigation */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <a href="#/intents/mitarbeiter-onboarding" className="group flex items-center gap-4 bg-card border border-border border-l-4 border-l-primary rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+          <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <IconUserPlus size={20} className="text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-foreground truncate">Mitarbeiter onboarden</div>
+            <div className="text-xs text-muted-foreground truncate">Stelle wählen · Mitarbeiter anlegen · Abschluss</div>
+          </div>
+          <IconChevronRight size={16} className="text-muted-foreground shrink-0" />
+        </a>
+        <a href="#/intents/leistungsbeurteilung" className="group flex items-center gap-4 bg-card border border-border border-l-4 border-l-primary rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+          <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <IconClipboardCheck size={20} className="text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-foreground truncate">Leistungsbeurteilung durchführen</div>
+            <div className="text-xs text-muted-foreground truncate">Mitarbeiter wählen · Beurteilung erfassen · Zusammenfassung</div>
+          </div>
+          <IconChevronRight size={16} className="text-muted-foreground shrink-0" />
+        </a>
+      </div>
+
       {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
