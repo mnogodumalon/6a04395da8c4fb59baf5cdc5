@@ -6,7 +6,7 @@ import { LivingAppsService, createRecordUrl } from '@/services/livingAppsService
 import { formatDate } from '@/lib/formatters';
 import { useState, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { IconAlertCircle, IconTool, IconRefresh, IconCheck, IconPlus, IconPencil, IconTrash, IconUsers, IconBriefcase, IconBuilding, IconCalendarOff, IconStar, IconSearch, IconX, IconChevronRight, IconUserPlus, IconClipboardCheck } from '@tabler/icons-react';
+import { IconAlertCircle, IconTool, IconRefresh, IconCheck, IconPlus, IconPencil, IconTrash, IconUsers, IconBriefcase, IconBuilding, IconCalendarOff, IconStar, IconSearch, IconX, IconChevronRight, IconUserPlus, IconClipboardCheck, IconList, IconLayoutKanban } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -75,6 +75,7 @@ export default function DashboardOverview() {
   const [editAbw, setEditAbw] = useState<EnrichedAbwesenheiten | null>(null);
   const [deleteAbwTarget, setDeleteAbwTarget] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'mitarbeiter' | 'abwesenheiten'>('mitarbeiter');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -266,7 +267,25 @@ export default function DashboardOverview() {
                 )}
               </button>
             </div>
-            {activeTab === 'mitarbeiter' ? (
+            {activeTab === 'mitarbeiter' && (
+              <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  title="Listenansicht"
+                >
+                  <IconList size={15} className="shrink-0" />
+                </button>
+                <button
+                  onClick={() => setViewMode('kanban')}
+                  className={`p-1.5 rounded-md transition-colors ${viewMode === 'kanban' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  title="Kanban-Ansicht"
+                >
+                  <IconLayoutKanban size={15} className="shrink-0" />
+                </button>
+              </div>
+            )}
+          {activeTab === 'mitarbeiter' ? (
               <Button size="sm" onClick={() => { setEditMa(null); setMaDialogOpen(true); }}>
                 <IconPlus size={14} className="mr-1 shrink-0" />Mitarbeiter
               </Button>
@@ -277,7 +296,23 @@ export default function DashboardOverview() {
             )}
           </div>
 
-          {activeTab === 'mitarbeiter' && (
+          {activeTab === 'mitarbeiter' && viewMode === 'kanban' && (
+            <KanbanBoard
+              mitarbeiter={filteredMa}
+              search={search}
+              setSearch={setSearch}
+              selectedAbteilung={selectedAbteilung}
+              setSelectedAbteilung={setSelectedAbteilung}
+              abteilungen={abteilungen}
+              maAbwToday={maAbwToday}
+              onEdit={(ma) => { setEditMa(ma); setMaDialogOpen(true); }}
+              onDelete={(id) => setDeleteTarget(id)}
+              onSelect={(ma) => setSelectedMa(ma)}
+              selectedId={selectedMa?.record_id}
+            />
+          )}
+
+          {activeTab === 'mitarbeiter' && viewMode === 'list' && (
             <>
               {/* Search + Abteilung Filter */}
               <div className="px-4 py-2 flex gap-2 flex-wrap border-b border-border">
@@ -364,6 +399,7 @@ export default function DashboardOverview() {
               </div>
             </>
           )}
+
 
           {activeTab === 'abwesenheiten' && (
             <div className="flex-1 overflow-y-auto max-h-[480px]">
@@ -497,6 +533,151 @@ export default function DashboardOverview() {
         onConfirm={handleDeleteAbw}
         onClose={() => setDeleteAbwTarget(null)}
       />
+    </div>
+  );
+}
+
+const KANBAN_COLUMNS = [
+  { key: 'aktiv', label: 'Aktiv' },
+  { key: 'probezeit', label: 'Probezeit' },
+  { key: 'elternzeit', label: 'Elternzeit' },
+  { key: 'inaktiv', label: 'Inaktiv' },
+  { key: 'gekuendigt', label: 'Gekündigt' },
+];
+
+interface KanbanBoardProps {
+  mitarbeiter: EnrichedMitarbeiter[];
+  search: string;
+  setSearch: (v: string) => void;
+  selectedAbteilung: string | null;
+  setSelectedAbteilung: (v: string | null) => void;
+  abteilungen: { record_id: string; fields: { abteilung_name?: string; abteilung_kuerzel?: string } }[];
+  maAbwToday: EnrichedMitarbeiter[];
+  onEdit: (ma: EnrichedMitarbeiter) => void;
+  onDelete: (id: string) => void;
+  onSelect: (ma: EnrichedMitarbeiter) => void;
+  selectedId: string | undefined;
+}
+
+function KanbanBoard({ mitarbeiter, search, setSearch, selectedAbteilung, setSelectedAbteilung, abteilungen, maAbwToday, onEdit, onDelete, onSelect, selectedId }: KanbanBoardProps) {
+  const byStatus = useMemo(() => {
+    const map: Record<string, EnrichedMitarbeiter[]> = {};
+    for (const col of KANBAN_COLUMNS) map[col.key] = [];
+    map['__sonstiges__'] = [];
+    for (const ma of mitarbeiter) {
+      const key = ma.fields.beschaeftigungsstatus?.key ?? '';
+      if (map[key] !== undefined) {
+        map[key].push(ma);
+      } else {
+        map['__sonstiges__'].push(ma);
+      }
+    }
+    return map;
+  }, [mitarbeiter]);
+
+  const allCols = [
+    ...KANBAN_COLUMNS,
+    ...(byStatus['__sonstiges__'].length > 0 ? [{ key: '__sonstiges__', label: 'Sonstige' }] : []),
+  ];
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* Search + Filter */}
+      <div className="px-4 py-2 flex gap-2 flex-wrap border-b border-border">
+        <div className="relative flex-1 min-w-0">
+          <IconSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground shrink-0" />
+          <Input
+            placeholder="Suchen…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-8 h-8 text-sm"
+          />
+        </div>
+        <div className="flex gap-1 flex-wrap">
+          <button
+            onClick={() => setSelectedAbteilung(null)}
+            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${!selectedAbteilung ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent'}`}
+          >
+            Alle
+          </button>
+          {abteilungen.map(abt => (
+            <button
+              key={abt.record_id}
+              onClick={() => setSelectedAbteilung(abt.record_id === selectedAbteilung ? null : abt.record_id)}
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedAbteilung === abt.record_id ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent'}`}
+            >
+              {abt.fields.abteilung_kuerzel ?? abt.fields.abteilung_name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Kanban Columns */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden">
+        <div className="flex gap-3 p-3 h-full" style={{ minWidth: `${allCols.filter(c => byStatus[c.key]?.length > 0 || KANBAN_COLUMNS.some(k => k.key === c.key)).length * 220}px` }}>
+          {allCols.map(col => {
+            const cards = byStatus[col.key] ?? [];
+            return (
+              <div key={col.key} className="flex flex-col rounded-xl border border-border bg-muted/30 overflow-hidden shrink-0" style={{ width: '200px' }}>
+                {/* Column Header */}
+                <div className={`px-3 py-2 flex items-center gap-2 border-b border-border bg-card`}>
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_COLORS[col.key]?.includes('green') ? 'bg-green-500' : STATUS_COLORS[col.key]?.includes('amber') ? 'bg-amber-500' : STATUS_COLORS[col.key]?.includes('red') ? 'bg-red-500' : STATUS_COLORS[col.key]?.includes('purple') ? 'bg-purple-500' : 'bg-zinc-400'}`} />
+                  <span className="text-xs font-semibold text-foreground truncate flex-1">{col.label}</span>
+                  <span className="text-xs text-muted-foreground font-medium shrink-0">{cards.length}</span>
+                </div>
+                {/* Cards */}
+                <div className="flex-1 overflow-y-auto p-2 space-y-2 max-h-[340px]">
+                  {cards.length === 0 ? (
+                    <div className="flex items-center justify-center py-6 text-muted-foreground/50">
+                      <span className="text-xs">Leer</span>
+                    </div>
+                  ) : (
+                    cards.map(ma => {
+                      const isAbwesend = maAbwToday.some(m => m.record_id === ma.record_id);
+                      const isSelected = selectedId === ma.record_id;
+                      return (
+                        <div
+                          key={ma.record_id}
+                          className={`rounded-lg border bg-card p-2.5 cursor-pointer transition-all ${isSelected ? 'border-primary shadow-sm' : 'border-border hover:border-primary/40 hover:shadow-sm'}`}
+                          onClick={() => onSelect(ma)}
+                        >
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <AvatarCircle vorname={ma.fields.vorname} nachname={ma.fields.nachname} foto={ma.fields.ma_foto} size="sm" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-semibold truncate">{ma.fields.vorname} {ma.fields.nachname}</div>
+                              {ma.ma_abteilungName && <div className="text-[10px] text-muted-foreground truncate">{ma.ma_abteilungName}</div>}
+                            </div>
+                          </div>
+                          {ma.ma_stelleName && (
+                            <div className="text-[10px] text-muted-foreground truncate mb-1.5">{ma.ma_stelleName}</div>
+                          )}
+                          {isAbwesend && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">abwesend</span>
+                          )}
+                          <div className="flex items-center justify-end gap-1 mt-1.5 pt-1.5 border-t border-border/50">
+                            <button
+                              onClick={e => { e.stopPropagation(); onEdit(ma); }}
+                              className="p-1 rounded hover:bg-accent text-muted-foreground"
+                            >
+                              <IconPencil size={12} className="shrink-0" />
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); onDelete(ma.record_id); }}
+                              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                            >
+                              <IconTrash size={12} className="shrink-0" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
