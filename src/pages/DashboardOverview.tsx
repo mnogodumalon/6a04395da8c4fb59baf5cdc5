@@ -145,6 +145,11 @@ export default function DashboardOverview() {
     if (selectedMa?.record_id === deleteTarget) setSelectedMa(null);
   };
 
+  const handleStatusUpdate = async (id: string, statusKey: string, statusLabel: string) => {
+    await LivingAppsService.updateMitarbeiterEntry(id, { beschaeftigungsstatus: { key: statusKey, label: statusLabel } } as Parameters<typeof LivingAppsService.updateMitarbeiterEntry>[1]);
+    fetchAll();
+  };
+
   const handleDeleteAbw = async () => {
     if (!deleteAbwTarget) return;
     await LivingAppsService.deleteAbwesenheitenEntry(deleteAbwTarget);
@@ -309,6 +314,7 @@ export default function DashboardOverview() {
               onDelete={(id) => setDeleteTarget(id)}
               onSelect={(ma) => setSelectedMa(ma)}
               selectedId={selectedMa?.record_id}
+              onUpdateStatus={handleStatusUpdate}
             />
           )}
 
@@ -557,9 +563,14 @@ interface KanbanBoardProps {
   onDelete: (id: string) => void;
   onSelect: (ma: EnrichedMitarbeiter) => void;
   selectedId: string | undefined;
+  onUpdateStatus: (id: string, statusKey: string, statusLabel: string) => void;
 }
 
-function KanbanBoard({ mitarbeiter, search, setSearch, selectedAbteilung, setSelectedAbteilung, abteilungen, maAbwToday, onEdit, onDelete, onSelect, selectedId }: KanbanBoardProps) {
+function KanbanBoard({ mitarbeiter, search, setSearch, selectedAbteilung, setSelectedAbteilung, abteilungen, maAbwToday, onEdit, onDelete, onSelect, selectedId, onUpdateStatus }: KanbanBoardProps) {
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragSourceCol, setDragSourceCol] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+
   const byStatus = useMemo(() => {
     const map: Record<string, EnrichedMitarbeiter[]> = {};
     for (const col of KANBAN_COLUMNS) map[col.key] = [];
@@ -579,6 +590,30 @@ function KanbanBoard({ mitarbeiter, search, setSearch, selectedAbteilung, setSel
     ...KANBAN_COLUMNS,
     ...(byStatus['__sonstiges__'].length > 0 ? [{ key: '__sonstiges__', label: 'Sonstige' }] : []),
   ];
+
+  const handleDragStart = (e: React.DragEvent, ma: EnrichedMitarbeiter, colKey: string) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', ma.record_id);
+    setDragId(ma.record_id);
+    setDragSourceCol(colKey);
+  };
+
+  const handleDragEnd = () => {
+    setDragId(null);
+    setDragSourceCol(null);
+    setDragOverCol(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, col: { key: string; label: string }) => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('text/plain');
+    if (id && dragSourceCol !== col.key && col.key !== '__sonstiges__') {
+      onUpdateStatus(id, col.key, col.label);
+    }
+    setDragId(null);
+    setDragSourceCol(null);
+    setDragOverCol(null);
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -614,20 +649,34 @@ function KanbanBoard({ mitarbeiter, search, setSearch, selectedAbteilung, setSel
 
       {/* Kanban Columns */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden">
-        <div className="flex gap-3 p-3 h-full" style={{ minWidth: `${allCols.filter(c => byStatus[c.key]?.length > 0 || KANBAN_COLUMNS.some(k => k.key === c.key)).length * 220}px` }}>
+        <div className="flex gap-3 p-3 h-full" style={{ minWidth: `${allCols.length * 220}px` }}>
           {allCols.map(col => {
             const cards = byStatus[col.key] ?? [];
+            const isDropTarget = dragOverCol === col.key && dragSourceCol !== col.key && col.key !== '__sonstiges__';
             return (
-              <div key={col.key} className="flex flex-col rounded-xl border border-border bg-muted/30 overflow-hidden shrink-0" style={{ width: '200px' }}>
+              <div
+                key={col.key}
+                className={`flex flex-col rounded-xl border bg-muted/30 overflow-hidden shrink-0 transition-all ${isDropTarget ? 'border-primary shadow-md bg-primary/5' : 'border-border'}`}
+                style={{ width: '200px' }}
+                onDragOver={e => { e.preventDefault(); setDragOverCol(col.key); }}
+                onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverCol(null); }}
+                onDrop={e => handleDrop(e, col)}
+              >
                 {/* Column Header */}
-                <div className={`px-3 py-2 flex items-center gap-2 border-b border-border bg-card`}>
+                <div className={`px-3 py-2 flex items-center gap-2 border-b bg-card ${isDropTarget ? 'border-primary/30' : 'border-border'}`}>
                   <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_COLORS[col.key]?.includes('green') ? 'bg-green-500' : STATUS_COLORS[col.key]?.includes('amber') ? 'bg-amber-500' : STATUS_COLORS[col.key]?.includes('red') ? 'bg-red-500' : STATUS_COLORS[col.key]?.includes('purple') ? 'bg-purple-500' : 'bg-zinc-400'}`} />
                   <span className="text-xs font-semibold text-foreground truncate flex-1">{col.label}</span>
                   <span className="text-xs text-muted-foreground font-medium shrink-0">{cards.length}</span>
                 </div>
+                {/* Drop hint */}
+                {isDropTarget && (
+                  <div className="mx-2 mt-2 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 py-3 flex items-center justify-center">
+                    <span className="text-[10px] text-primary font-medium">Hier ablegen</span>
+                  </div>
+                )}
                 {/* Cards */}
                 <div className="flex-1 overflow-y-auto p-2 space-y-2 max-h-[340px]">
-                  {cards.length === 0 ? (
+                  {cards.length === 0 && !isDropTarget ? (
                     <div className="flex items-center justify-center py-6 text-muted-foreground/50">
                       <span className="text-xs">Leer</span>
                     </div>
@@ -635,11 +684,15 @@ function KanbanBoard({ mitarbeiter, search, setSearch, selectedAbteilung, setSel
                     cards.map(ma => {
                       const isAbwesend = maAbwToday.some(m => m.record_id === ma.record_id);
                       const isSelected = selectedId === ma.record_id;
+                      const isDragging = dragId === ma.record_id;
                       return (
                         <div
                           key={ma.record_id}
-                          className={`rounded-lg border bg-card p-2.5 cursor-pointer transition-all ${isSelected ? 'border-primary shadow-sm' : 'border-border hover:border-primary/40 hover:shadow-sm'}`}
-                          onClick={() => onSelect(ma)}
+                          draggable
+                          onDragStart={e => handleDragStart(e, ma, col.key)}
+                          onDragEnd={handleDragEnd}
+                          className={`rounded-lg border bg-card p-2.5 transition-all select-none ${isDragging ? 'opacity-40 scale-95 cursor-grabbing' : 'cursor-grab'} ${isSelected ? 'border-primary shadow-sm' : 'border-border hover:border-primary/40 hover:shadow-sm'}`}
+                          onClick={() => !isDragging && onSelect(ma)}
                         >
                           <div className="flex items-center gap-2 mb-1.5">
                             <AvatarCircle vorname={ma.fields.vorname} nachname={ma.fields.nachname} foto={ma.fields.ma_foto} size="sm" />
