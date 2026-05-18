@@ -6,7 +6,7 @@ import { LivingAppsService, createRecordUrl } from '@/services/livingAppsService
 import { formatDate } from '@/lib/formatters';
 import { useState, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { IconAlertCircle, IconTool, IconRefresh, IconCheck, IconPlus, IconPencil, IconTrash, IconUsers, IconBriefcase, IconBuilding, IconCalendarOff, IconStar, IconSearch, IconX, IconChevronRight, IconUserPlus, IconClipboardCheck, IconList, IconLayoutKanban } from '@tabler/icons-react';
+import { IconAlertCircle, IconTool, IconRefresh, IconCheck, IconPlus, IconPencil, IconTrash, IconUsers, IconBriefcase, IconBuilding, IconCalendarOff, IconStar, IconSearch, IconX, IconChevronRight, IconUserPlus, IconClipboardCheck, IconList, IconLayoutKanban, IconClock, IconMail, IconCopy, IconChevronDown } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -76,6 +76,9 @@ export default function DashboardOverview() {
   const [deleteAbwTarget, setDeleteAbwTarget] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'mitarbeiter' | 'abwesenheiten'>('mitarbeiter');
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [ueberstundenDialogOpen, setUeberstundenDialogOpen] = useState(false);
+  const [ueberstundenSelectedMa, setUeberstundenSelectedMa] = useState<EnrichedMitarbeiter | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -177,7 +180,7 @@ export default function DashboardOverview() {
   return (
     <div className="space-y-6">
       {/* Intent Navigation */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <a href="#/intents/mitarbeiter-onboarding" className="group flex items-center gap-4 bg-card border border-border border-l-4 border-l-primary rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
           <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
             <IconUserPlus size={20} className="text-primary" />
@@ -198,6 +201,19 @@ export default function DashboardOverview() {
           </div>
           <IconChevronRight size={16} className="text-muted-foreground shrink-0" />
         </a>
+        <button
+          onClick={() => setUeberstundenDialogOpen(true)}
+          className="group flex items-center gap-4 bg-card border border-border border-l-4 border-l-amber-500 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow overflow-hidden text-left w-full"
+        >
+          <div className="shrink-0 w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+            <IconClock size={20} className="text-amber-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-foreground truncate">Überstunden-Formular senden</div>
+            <div className="text-xs text-muted-foreground truncate">Mitarbeiter wählen · Link generieren · Per E-Mail senden</div>
+          </div>
+          <IconChevronRight size={16} className="text-muted-foreground shrink-0" />
+        </button>
       </div>
 
       {/* KPI Row */}
@@ -524,6 +540,18 @@ export default function DashboardOverview() {
         enablePhotoLocation={AI_PHOTO_LOCATION['Abwesenheiten']}
       />
 
+      {/* Überstunden-Dialog */}
+      {ueberstundenDialogOpen && (
+        <UeberstundenSendenDialog
+          mitarbeiter={enrichedMitarbeiter}
+          onClose={() => { setUeberstundenDialogOpen(false); setUeberstundenSelectedMa(null); setLinkCopied(false); }}
+          selectedMa={ueberstundenSelectedMa}
+          setSelectedMa={setUeberstundenSelectedMa}
+          linkCopied={linkCopied}
+          setLinkCopied={setLinkCopied}
+        />
+      )}
+
       <ConfirmDialog
         open={!!deleteTarget}
         title="Mitarbeiter löschen"
@@ -539,6 +567,167 @@ export default function DashboardOverview() {
         onConfirm={handleDeleteAbw}
         onClose={() => setDeleteAbwTarget(null)}
       />
+    </div>
+  );
+}
+
+function UeberstundenSendenDialog({
+  mitarbeiter,
+  onClose,
+  selectedMa,
+  setSelectedMa,
+  linkCopied,
+  setLinkCopied,
+}: {
+  mitarbeiter: EnrichedMitarbeiter[];
+  onClose: () => void;
+  selectedMa: EnrichedMitarbeiter | null;
+  setSelectedMa: (ma: EnrichedMitarbeiter | null) => void;
+  linkCopied: boolean;
+  setLinkCopied: (v: boolean) => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [showList, setShowList] = useState(false);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return mitarbeiter.slice(0, 8);
+    const s = search.toLowerCase();
+    return mitarbeiter.filter(m =>
+      `${m.fields.vorname} ${m.fields.nachname}`.toLowerCase().includes(s) ||
+      (m.fields.email ?? '').toLowerCase().includes(s)
+    ).slice(0, 8);
+  }, [mitarbeiter, search]);
+
+  const formUrl = selectedMa
+    ? `${window.location.origin}${window.location.pathname}#/public/p/ueberstunden?vorname=${encodeURIComponent(selectedMa.fields.vorname ?? '')}&nachname=${encodeURIComponent(selectedMa.fields.nachname ?? '')}`
+    : `${window.location.origin}${window.location.pathname}#/public/p/ueberstunden`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(formUrl);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
+  const handleEmail = () => {
+    const name = selectedMa ? `${selectedMa.fields.vorname} ${selectedMa.fields.nachname}` : '';
+    const email = selectedMa?.fields.email ?? '';
+    const subject = encodeURIComponent('Überstunden bitte eintragen');
+    const body = encodeURIComponent(
+      `Hallo${name ? ` ${selectedMa?.fields.vorname}` : ''},\n\nbitte trag deine geleisteten Überstunden über folgenden Link ein:\n\n${formUrl}\n\nVielen Dank!`
+    );
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+      <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+              <IconClock size={18} className="text-amber-600 shrink-0" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-foreground text-sm">Überstunden-Formular senden</h2>
+              <p className="text-xs text-muted-foreground">Link generieren und per E-Mail versenden</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground shrink-0">
+            <IconX size={16} className="shrink-0" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Mitarbeiter auswählen */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Mitarbeiter (optional)</label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowList(!showList)}
+                className="w-full flex items-center justify-between gap-2 border border-border rounded-lg px-3 py-2 text-sm bg-background hover:bg-accent transition-colors"
+              >
+                <span className={selectedMa ? 'text-foreground' : 'text-muted-foreground'}>
+                  {selectedMa ? `${selectedMa.fields.vorname} ${selectedMa.fields.nachname}` : 'Allgemeiner Link (kein Mitarbeiter)'}
+                </span>
+                <IconChevronDown size={14} className="shrink-0 text-muted-foreground" />
+              </button>
+              {showList && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg z-10 overflow-hidden">
+                  <div className="p-2 border-b border-border">
+                    <div className="relative">
+                      <IconSearch size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground shrink-0" />
+                      <input
+                        autoFocus
+                        placeholder="Suchen…"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="w-full pl-7 pr-3 py-1.5 text-xs bg-muted rounded-md outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedMa(null); setShowList(false); }}
+                      className="w-full px-3 py-2 text-xs text-left hover:bg-accent text-muted-foreground"
+                    >
+                      Allgemeiner Link (kein Mitarbeiter)
+                    </button>
+                    {filtered.map(ma => (
+                      <button
+                        key={ma.record_id}
+                        type="button"
+                        onClick={() => { setSelectedMa(ma); setShowList(false); setSearch(''); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-accent"
+                      >
+                        <AvatarCircle vorname={ma.fields.vorname} nachname={ma.fields.nachname} foto={ma.fields.ma_foto} size="sm" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">{ma.fields.vorname} {ma.fields.nachname}</div>
+                          {ma.fields.email && <div className="text-muted-foreground truncate">{ma.fields.email}</div>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Link-Vorschau */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Formular-Link</label>
+            <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2 border border-border">
+              <span className="flex-1 text-xs text-muted-foreground truncate font-mono">{formUrl}</span>
+            </div>
+          </div>
+
+          {/* Aktionen */}
+          <div className="flex gap-2 pt-1">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={handleCopy}
+            >
+              {linkCopied
+                ? <><IconCheck size={14} className="mr-1.5 shrink-0 text-green-600" /><span className="text-green-600">Kopiert!</span></>
+                : <><IconCopy size={14} className="mr-1.5 shrink-0" />Link kopieren</>
+              }
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={handleEmail}
+              disabled={!selectedMa?.fields.email}
+            >
+              <IconMail size={14} className="mr-1.5 shrink-0" />
+              Per E-Mail senden
+            </Button>
+          </div>
+          {!selectedMa?.fields.email && selectedMa && (
+            <p className="text-xs text-muted-foreground text-center">Keine E-Mail-Adresse hinterlegt — Link manuell kopieren</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

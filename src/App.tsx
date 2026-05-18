@@ -18,6 +18,7 @@ import PublicFormMitarbeiter from '@/pages/public/PublicForm_Mitarbeiter';
 import PublicFormAbwesenheiten from '@/pages/public/PublicForm_Abwesenheiten';
 import PublicFormLeistungsbeurteilungen from '@/pages/public/PublicForm_Leistungsbeurteilungen';
 // <public:imports>
+import UeberstundenForm from '@/pages/public/UeberstundenForm';
 // </public:imports>
 // <custom:imports>
 const MitarbeiterOnboardingPage = lazy(() => import('@/pages/intents/MitarbeiterOnboardingPage'));
@@ -37,6 +38,7 @@ export default function App() {
               <Route path="public/6a04393b87d551873784e867" element={<PublicFormAbwesenheiten />} />
               <Route path="public/6a04393ce2ed260f9576b292" element={<PublicFormLeistungsbeurteilungen />} />
               {/* <public:routes> */}
+              <Route path="public/p/ueberstunden" element={<UeberstundenForm />} />
               {/* </public:routes> */}
               <Route element={<Layout />}>
                 <Route index element={<DashboardOverview />} />
